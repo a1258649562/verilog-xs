@@ -1,0 +1,180 @@
+`timescale 1ns/10ps
+
+module together_tb();
+
+reg clk;
+reg rst;
+reg enable_fill_precinct;
+
+reg[12:0] image_width;
+reg[12:0] image_height; 
+
+reg[127:0] Y_LL_5_1;
+reg[127:0] Y_HL_5_1;
+reg[255:0] Y_HL_4_1;
+reg[511:0] Y_HL_3_1;
+reg[1023:0] Y_HL_2_1;
+reg[2047:0] Y_HL_1_1;
+reg[2047:0] Y_LH_1_1;
+reg[2047:0] Y_HH_1_1;
+
+reg[127:0] U_LL_5_1;
+reg[127:0] U_HL_5_1;
+reg[255:0] U_HL_4_1;
+reg[511:0] U_HL_3_1;
+reg[1023:0] U_HL_2_1;
+reg[2047:0] U_HL_1_1;
+reg[2047:0] U_LH_1_1;
+reg[2047:0] U_HH_1_1;
+
+reg[127:0] V_LL_5_1;
+reg[127:0] V_HL_5_1;
+reg[255:0] V_HL_4_1;
+reg[511:0] V_HL_3_1;
+reg[1023:0] V_HL_2_1;
+reg[2047:0] V_HL_1_1;
+reg[2047:0] V_LH_1_1;
+reg[2047:0] V_HH_1_1;
+
+wire fill_precinct_rdy;
+wire compute_gclis_rdy;
+
+wire[11:0] wv_out1;
+wire[11:0] wv_out2;
+wire[11:0] wv_out3;
+wire[11:0] wv_out4;
+
+wire[3:0] gclis_out;  //输出皿4位宽位平面数
+
+parameter DELY = 100;
+integer i;
+
+fill_precinct instance1(    .clk(clk), 
+                            .rst(rst), 
+                            .enable_fill_precinct(enable_fill_precinct), 
+                            .rdy(fill_precinct_rdy),
+            
+                            .image_width(image_width),
+                            .image_height(image_height), 
+            
+                            .Y_LL_5_1(Y_LL_5_1),
+                            .Y_HL_5_1(Y_HL_5_1),
+                            .Y_HL_4_1(Y_HL_4_1),
+                            .Y_HL_3_1(Y_HL_3_1),
+                            .Y_HL_2_1(Y_HL_2_1),
+                            .Y_HL_1_1(Y_HL_1_1),
+                            .Y_LH_1_1(Y_LH_1_1),
+                            .Y_HH_1_1(Y_HH_1_1),
+            
+                            .U_LL_5_1(U_LL_5_1),
+                            .U_HL_5_1(U_HL_5_1),
+                            .U_HL_4_1(U_HL_4_1),
+                            .U_HL_3_1(U_HL_3_1),
+                            .U_HL_2_1(U_HL_2_1),
+                            .U_HL_1_1(U_HL_1_1),
+                            .U_LH_1_1(U_LH_1_1),
+                            .U_HH_1_1(U_HH_1_1),
+            
+                            .V_LL_5_1(V_LL_5_1),
+                            .V_HL_5_1(V_HL_5_1),
+                            .V_HL_4_1(V_HL_4_1),
+                            .V_HL_3_1(V_HL_3_1),
+                            .V_HL_2_1(V_HL_2_1),
+                            .V_HL_1_1(V_HL_1_1),
+                            .V_LH_1_1(V_LH_1_1),
+                            .V_HH_1_1(V_HH_1_1),
+            
+                            .wv_out1(wv_out1),
+                            .wv_out2(wv_out2),
+                            .wv_out3(wv_out3),
+                            .wv_out4(wv_out4)
+);
+
+compute_gclis instance2(    .clk(clk), 
+                            .rst(rst), 
+                            .enable_compute_gclis(fill_precinct_rdy), 
+                            .wv_in1(wv_out1),
+                            .wv_in2(wv_out2),
+                            .wv_in3(wv_out3),
+                            .wv_in4(wv_out4),
+                            .gclis_out(gclis_out),
+                            .rdy(compute_gclis_rdy)
+                    );
+
+always #(DELY / 2) clk = ~clk ;
+
+initial begin
+    clk = 0; rst = 1; enable_fill_precinct = 0;
+    image_height = 128; image_width = 128;
+    #DELY rst = 0 ;
+    #DELY rst = 1 ;
+
+    #DELY
+    enable_fill_precinct = 1;
+    Y_LL_5_1 = 48'd1;
+    Y_HL_5_1 = 48'd2;
+    Y_HL_4_1 = 96'd3;
+    Y_HL_3_1 = 192'd4;
+    Y_HL_2_1 = 384'd5;
+    Y_HL_1_1 = 768'd6;
+    Y_LH_1_1 = 768'd7;
+    Y_HH_1_1 = 768'd8;
+
+    U_LL_5_1 = 48'd1;
+    U_HL_5_1 = 48'd2;
+    U_HL_4_1 = 96'd3;
+    U_HL_3_1 = 192'd4;
+    U_HL_2_1 = 384'd5;
+    U_HL_1_1 = 768'd6;
+    U_LH_1_1 = 768'd7;
+    U_HH_1_1 = 768'd8;
+
+    V_LL_5_1 = 48'd1;
+    V_HL_5_1 = 48'd2;
+    V_HL_4_1 = 96'd3;
+    V_HL_3_1 = 192'd4;
+    V_HL_2_1 = 384'd5;
+    V_HL_1_1 = 768'd6;
+    V_LH_1_1 = 768'd7;
+    V_HH_1_1 = 768'd8;
+
+    for(i = 0; i < 2 ; i = i + 1 ) begin
+        
+        #20000
+        enable_fill_precinct = 0;
+        #DELY
+        enable_fill_precinct = 1;
+        
+        Y_LL_5_1 = i;
+        Y_HL_5_1 = i + 1;
+        Y_HL_4_1 = i + 2;
+        Y_HL_3_1 = i + 3;
+        Y_HL_2_1 = i + 4;
+        Y_HL_1_1 = i + 5;
+        Y_LH_1_1 = i + 6;
+        Y_HH_1_1 = i + 7;
+
+        U_LL_5_1 = i + 8;
+        U_HL_5_1 = i + 9;
+        U_HL_4_1 = i + 10;
+        U_HL_3_1 = i + 11;
+        U_HL_2_1 = i + 12;
+        U_HL_1_1 = i + 13;
+        U_LH_1_1 = i + 14;
+        U_HH_1_1 = i + 15;
+
+        V_LL_5_1 = i + 16;
+        V_HL_5_1 = i + 17;
+        V_HL_4_1 = i + 18;
+        V_HL_3_1 = i + 19;
+        V_HL_2_1 = i + 20;
+        V_HL_1_1 = i + 21;
+        V_LH_1_1 = i + 22;
+        V_HH_1_1 = i + 23;
+
+    end
+
+    #(DELY*1000000) $stop;
+end
+
+endmodule
