@@ -1,0 +1,235 @@
+`timescale 1ns/10ps
+
+//把转存下的小波系数，划分为precinct，以precinct为单位输出，为位平面数计算做准备。
+
+module fill_precinct(   clk, 
+                        rst, 
+                        enable_fill_precinct, 
+                        rdy,
+
+                        image_width,
+                        image_height,
+
+                        Y_LL_5_1,
+                        Y_HL_5_1,
+                        Y_HL_4_1,
+                        Y_HL_3_1,
+                        Y_HL_2_1,
+                        Y_HL_1_1,
+                        Y_LH_1_1,
+                        Y_HH_1_1,
+
+                        U_LL_5_1,
+                        U_HL_5_1,
+                        U_HL_4_1,
+                        U_HL_3_1,
+                        U_HL_2_1,
+                        U_HL_1_1,
+                        U_LH_1_1,
+                        U_HH_1_1,
+
+                        V_LL_5_1,
+                        V_HL_5_1,
+                        V_HL_4_1,
+                        V_HL_3_1,
+                        V_HL_2_1,
+                        V_HL_1_1,
+                        V_LH_1_1,
+                        V_HH_1_1,
+
+                        wv_out1,
+                        wv_out2,
+                        wv_out3,
+                        wv_out4
+                );
+
+	//定义输入输出端口
+    input clk;
+    input rst;
+    input enable_fill_precinct;
+    
+    input[12:0] image_width;
+    input[12:0] image_height; 
+	
+    input[128*12-1:0] Y_LL_5_1;
+    input[128*12-1:0] Y_HL_5_1;
+    input[256*12-1:0] Y_HL_4_1;
+    input[512*12-1:0] Y_HL_3_1;
+    input[1024*12-1:0] Y_HL_2_1;
+    input[2048*12-1:0] Y_HL_1_1;
+    input[2048*12-1:0] Y_LH_1_1;
+    input[2048*12-1:0] Y_HH_1_1;
+
+    input[128*12-1:0] U_LL_5_1;
+    input[128*12-1:0] U_HL_5_1;
+    input[256*12-1:0] U_HL_4_1;
+    input[512*12-1:0] U_HL_3_1;
+    input[1024*12-1:0] U_HL_2_1;
+    input[2048*12-1:0] U_HL_1_1;
+    input[2048*12-1:0] U_LH_1_1;
+    input[2048*12-1:0] U_HH_1_1;
+
+    input[128*12-1:0] V_LL_5_1;
+    input[128*12-1:0] V_HL_5_1;
+    input[256*12-1:0] V_HL_4_1;
+    input[512*12-1:0] V_HL_3_1;
+    input[1024*12-1:0] V_HL_2_1;
+    input[2048*12-1:0] V_HL_1_1;
+    input[2048*12-1:0] V_LH_1_1;
+    input[2048*12-1:0] V_HH_1_1;
+
+    output rdy;
+    output[11:0] wv_out1;
+    output[11:0] wv_out2;
+    output[11:0] wv_out3;
+    output[11:0] wv_out4;
+
+    reg rdy;
+    reg[11:0] wv_out1;
+    reg[11:0] wv_out2;
+    reg[11:0] wv_out3;
+    reg[11:0] wv_out4;
+
+	//定义局部变量
+    reg[9215:0] precinct;     	//调试用
+	//reg[294911:0] precinct;		//4096 * 6 * 12 = 294912
+	
+	reg precinct_rdy;
+    //define the time counter
+    reg[27:0]       cnt0;
+    //reg             impulse;
+    //parameter       SET_TIME = ( 32 * 6 ) >> 2;
+	
+    //把乱序的band拼接为precinct
+	always@(posedge clk) begin
+	   
+		if(enable_fill_precinct) begin
+		
+			precinct <= {    
+			
+				//仅做调试用
+				
+			    V_HH_1_1[128 * 6 - 1 : 0], U_HH_1_1[128 * 6 - 1 : 0],
+				Y_HH_1_1[128 * 6 - 1 : 0], V_LH_1_1[128 * 6 - 1 : 0], 
+				U_LH_1_1[128 * 6 - 1 : 0], Y_LH_1_1[128 * 6 - 1 : 0], 
+				V_HL_1_1[128 * 6 - 1 : 0], U_HL_1_1[128 * 6 - 1 : 0], 
+				Y_HL_1_1[128 * 6 - 1 : 0], V_HL_2_1[128 * 3 - 1 : 0], 
+				U_HL_2_1[128 * 3 - 1 : 0], Y_HL_2_1[128 * 3 - 1 : 0], 
+				V_HL_3_1[((128 >> 1) * 3) - 1 : 0], U_HL_3_1[((128 >> 1) * 3) - 1 : 0], 
+				Y_HL_3_1[((128 >> 1) * 3) - 1 : 0], V_HL_4_1[((128 >> 2) * 3) - 1 : 0], 
+				U_HL_4_1[((128 >> 2) * 3) - 1 : 0], Y_HL_4_1[((128 >> 2) * 3) - 1 : 0], 
+				V_HL_5_1[((128 >> 3) * 3) - 1 : 0], U_HL_5_1[((128 >> 3) * 3) - 1 : 0], 
+				Y_HL_5_1[((128 >> 3) * 3) - 1 : 0], V_LL_5_1[((128 >> 3) * 3) - 1 : 0], 
+				U_LL_5_1[((128 >> 3) * 3) - 1 : 0], Y_LL_5_1[((128 >> 3) * 3) - 1 : 0]
+				
+				//4K图像执行下面代码
+				
+				/*V_HH_1_1[image_width * 6 - 1 : 0], U_HH_1_1[image_width * 6 - 1 : 0],
+				Y_HH_1_1[image_width * 6 - 1 : 0], V_LH_1_1[image_width * 6 - 1 : 0], 
+				U_LH_1_1[image_width * 6 - 1 : 0], Y_LH_1_1[image_width * 6 - 1 : 0], 
+				V_HL_1_1[image_width * 6 - 1 : 0], U_HL_1_1[image_width * 6 - 1 : 0], 
+				Y_HL_1_1[image_width * 6 - 1 : 0], V_HL_2_1[image_width * 3 - 1 : 0], 
+				U_HL_2_1[image_width * 3 - 1 : 0], Y_HL_2_1[image_width * 3 - 1 : 0], 
+				V_HL_3_1[((image_width >> 1) * 3) - 1 : 0], U_HL_3_1[((image_width >> 1) * 3) - 1 : 0], 
+				Y_HL_3_1[((image_width >> 1) * 3) - 1 : 0], V_HL_4_1[((image_width >> 2) * 3) - 1 : 0], 
+				U_HL_4_1[((image_width >> 2) * 3) - 1 : 0], Y_HL_4_1[((image_width >> 2) * 3) - 1 : 0], 
+				V_HL_5_1[((image_width >> 3) * 3) - 1 : 0], U_HL_5_1[((image_width >> 3) * 3) - 1 : 0], 
+				Y_HL_5_1[((image_width >> 3) * 3) - 1 : 0], V_LL_5_1[((image_width >> 3) * 3) - 1 : 0], 
+				U_LL_5_1[((image_width >> 3) * 3) - 1 : 0], Y_LL_5_1[((image_width >> 3) * 3) - 1 : 0]*/
+
+			}; 
+			
+			precinct_rdy <= 1;
+		end
+		else begin
+			
+			precinct <= precinct ;
+			precinct_rdy <= 0;
+			
+		end
+				
+	end
+	
+    always@(posedge clk ) begin
+	
+		if(enable_fill_precinct && precinct_rdy) begin
+		
+			if ( cnt0 == image_width * 6 * 12 ) begin
+				cnt0 <= 27'd0;                   //count done,clearing the time counter
+				//impulse <= 1'd1;
+			end
+			else begin
+				cnt0 <= cnt0 + 6'd48;            //cnt0 counter = cnt0 counter + 1
+				//impulse <= 1'd0;
+			end
+			
+		end
+		else begin
+		
+			cnt0 <= 27'd0;
+			//impulse <= 1'd1;
+			
+		end
+		
+    end
+
+	always@(posedge clk or negedge rst) begin
+
+        if(~rst) begin
+            
+            rdy <= 0;
+			precinct_rdy <= 0;
+			
+            wv_out1 <= 12'd0;
+            wv_out2 <= 12'd0;
+            wv_out3 <= 12'd0;
+            wv_out4 <= 12'd0;
+            
+            cnt0 <= 28'd0;
+            //impulse <= 1;
+            precinct <= 294912'd0;
+            
+        end
+        else if(enable_fill_precinct && precinct_rdy) begin
+
+            if(precinct[cnt0 + 11] == 0) begin
+                wv_out1 <= precinct[cnt0 +: 12];
+            end
+            else begin
+                wv_out1 <= { precinct[cnt0 + 11] , ~precinct[cnt0 +: 11] + 1'd1 };
+            end
+            
+            if(precinct[cnt0 + 23] == 0) begin
+                wv_out2 <= precinct[cnt0 + 12  +: 12];
+            end
+            else begin
+                wv_out2 <= { precinct[cnt0 + 23] , ~precinct[cnt0 + 12 +: 11] + 1'd1 };
+            end
+
+            if(precinct[cnt0 + 35] == 0) begin
+                wv_out3 <= precinct[cnt0 + 24 +: 12];
+            end
+            else begin
+                wv_out3 <= { precinct[cnt0 + 35] , ~precinct[cnt0 + 24 +: 11] + 1'd1 };
+            end
+
+            if(precinct[cnt0 + 47] == 0) begin
+                wv_out4 <= precinct[cnt0 + 36 +: 12];
+            end
+            else begin
+                wv_out4 <= { precinct[cnt0 + 47] , ~precinct[cnt0 + 36 +: 11] + 1'd1 };
+            end
+
+            rdy <= 1;
+			
+        end
+        else begin
+		
+            rdy <= 0;
+			
+        end
+
+    end
+
+endmodule
+
