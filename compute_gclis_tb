@@ -1,0 +1,51 @@
+`timescale 1ns/10ps
+
+module compute_gclis_tb();
+
+reg clk;
+reg rst;
+reg enable_compute_gclis;
+
+//四个输入系数
+reg[11:0] wv_in1;
+reg[11:0] wv_in2;
+reg[11:0] wv_in3;
+reg[11:0] wv_in4;
+
+wire[3:0] gclis_out;  //输出的4位宽位平面数
+wire rdy;             //给下层的使能信号
+
+integer i;
+parameter DELY = 100;
+
+compute_gclis instance1(    .clk(clk), 
+                            .rst(rst), 
+                            .enable_compute_gclis(enable_compute_gclis), 
+                            .wv_in1(wv_in1),
+                            .wv_in2(wv_in2),
+                            .wv_in3(wv_in3),
+                            .wv_in4(wv_in4),
+                            .gclis_out(gclis_out),
+                            .rdy(rdy)
+                    );
+
+always #(DELY / 2) clk = ~clk ;
+
+initial begin
+    clk = 0; rst = 1; enable_compute_gclis = 0; 
+    #DELY rst = 0 ;
+    #DELY rst = 1 ;
+    for(i = 0; i < 100 ; i = i + 1 ) begin
+        
+        #DELY 
+        enable_compute_gclis = 1;
+        wv_in1 = i + 0;
+        wv_in2 = i + 1;
+        wv_in3 = i + 2;
+        wv_in4 = i + 3; 
+
+    end
+
+    #(DELY*1000) $stop;
+end
+endmodule
