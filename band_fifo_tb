@@ -1,0 +1,52 @@
+`timescale 1ns/10ps
+
+module band_fifo_tb();
+
+reg clk;
+reg rst;
+reg we;
+reg send_enable;
+reg[11:0] data_in;
+
+wire[11:0] data_out;
+wire next_enable;
+
+integer i;
+parameter DELY = 100;
+
+band_fifo instance1(  .clk(clk),
+                      .rst(rst),
+                      .we(we),
+                      .send_enable(send_enable),
+                      .data_in(data_in),
+                      .data_out(data_out),
+                      .next_enable(next_enable)
+                    );
+
+always #(DELY/2) clk = ~clk;
+
+initial begin
+    clk = 0; rst = 1; send_enable = 1; we = 0; 
+    #DELY rst = 0 ;
+    #DELY rst = 1 ;
+    #(DELY/2);
+
+    for(i = 0; i < 8; i = i + 1) begin
+      
+      if(i < 4) begin
+        #DELY
+        we = 1;
+        data_in = i;
+      end
+      
+      if(i == 4) begin
+        #DELY
+        we = 0;
+      end
+      
+      
+    end
+
+end
+
+endmodule
