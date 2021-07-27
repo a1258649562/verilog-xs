@@ -1,0 +1,87 @@
+`timescale 1ns/10ps
+
+module compute_residules_verpred(       clk, 
+                                        rst,  
+                                        gclis,			//M
+                                        gclis_top,		//上层M
+                                        enable_gclis,
+            
+                                        residuals,		//残差
+                                        predictors,		//预测基值
+                                        gtlis,			//T
+                                        gtlis_top,		//上层T
+            
+                                        residules_rdy,	//计算完残差的使能信号
+                                        predictor_rdy	//计算完预测基值的使能信号
+                                  );
+
+input clk;
+input rst;
+input[3:0] gclis;
+input enable_gclis;
+input[3:0] gtlis;
+input[3:0] gtlis_top;
+input[3:0] gclis_top;
+
+output residules_rdy;
+output predictor_rdy;
+output[5:0] residuals;
+output[5:0] predictors;
+
+reg[5:0] residuals;
+reg[5:0] predictors;
+reg residules_rdy;
+reg predictor_rdy;
+
+//临时变量，存储本层M和T的值，用于计算
+reg[3:0] gclis_tmp;
+reg[3:0] gtlis_tmp;
+
+//vertical-pred预测基值的计算
+always @(posedge clk or negedge rst) begin
+  
+  //复位信号，数据初始化
+  if(~rst) begin
+    
+    residuals <= 0;
+    predictors <= 0;
+    residules_rdy <= 0;
+    predictor_rdy <= 0;
+    
+  end
+  else if(enable_gclis) begin
+    
+    //predictor为 gcli_top、gtli、gtli_top 三者最大值
+    predictors <= ((gtlis > gtlis_top) ? gtlis : gtlis_top) > gclis_top ? ((gtlis > gtlis_top) ? gtlis : gtlis_top) : gclis_top;
+    gclis_tmp <= gclis;
+    gtlis_tmp <= gtlis;
+    predictor_rdy <= 1;
+
+  end
+  else begin
+
+    predictors <= predictors;
+    
+  end
+
+end
+
+//vertical-pred残差的计箿
+always @(posedge clk) begin
+
+  if(predictor_rdy == 1) begin
+    
+	//residuals的值为max（M，T）- predictor
+    residuals <= (gclis_tmp > gtlis_tmp ? gclis_tmp : gtlis_tmp) - predictors;
+    residules_rdy <= 1;
+
+  end
+  else begin
+    
+    residuals <= residuals;
+    
+  end
+
+end
+
+endmodule
