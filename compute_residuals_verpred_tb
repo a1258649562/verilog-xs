@@ -1,0 +1,79 @@
+`timescale 1ns/10ps
+
+module compute_residules_verpred_tb();
+
+reg clk;
+reg rst;
+reg[3:0] gclis;
+reg enable_gclis;
+reg[3:0] gtlis;
+reg[3:0] gtlis_top;
+reg[3:0] gclis_top;
+
+wire residules_rdy;
+wire predictor_rdy;
+wire[5:0] residuals;
+wire[5:0] predictors;
+
+parameter DELY = 100;
+
+compute_residules_verpred ins2( .clk(clk), 
+                                .rst(rst),  
+                                .gclis(gclis),
+                                .gclis_top(gclis_top),
+                                .enable_gclis(enable_gclis),
+        
+                                .residuals(residuals),
+                                .predictors(predictors),
+                                .gtlis(gtlis),
+                                .gtlis_top(gtlis_top),
+        
+                                .residules_rdy(residules_rdy),
+                                .predictor_rdy(predictor_rdy)
+                      );
+
+always #(DELY / 2) clk = ~clk ;
+
+initial begin
+    clk = 0; rst = 1; enable_gclis = 0; 
+
+    #DELY rst = 0 ;
+    #DELY rst = 1 ;
+    #(DELY/2);
+
+    #DELY
+    enable_gclis = 1;
+    gclis = 10;
+    gtlis = 7;
+    gclis_top = 10;
+    gtlis_top = 7;
+
+    #DELY
+    enable_gclis = 1;
+    gclis = 11;
+    gtlis = 7;
+    gclis_top = 10;
+    gtlis_top = 7;
+
+    #DELY
+    enable_gclis = 1;
+    gclis = 10;
+    gtlis = 7;
+    gclis_top = 11;
+    gtlis_top = 7;
+
+    /*for(i = 0; i < 100 ; i = i + 1 ) begin
+        
+        #DELY 
+        enable_compute_gclis = 1;
+        wv_in1 = i + 0;
+        wv_in2 = i + 1;
+        wv_in3 = i + 2;
+        wv_in4 = i + 3; 
+
+    end
+    */
+
+    #(DELY*1000) $stop;
+end
+endmodule
