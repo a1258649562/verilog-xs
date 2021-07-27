@@ -1,0 +1,62 @@
+`timescale 1ns/10ps
+
+module compute_residuals_nopred(  clk, 
+                                  rst,  
+                                  gclis,		//位平面数
+                                  enable_gclis,	//使能信号
+
+                                  residuals,	//残差
+                                  predictors,	//预测基值
+                                  gtlis,		//T
+
+                                  residuals_rdy,//计算完残差的使能信号
+                                  predictors_rdy//计算完预测基值的使能信号
+                                );
+
+input clk;
+input rst;
+input[3:0] gclis;
+input enable_gclis;
+input[3:0] gtlis;
+
+output residuals_rdy;
+output predictors_rdy;
+output[5:0] residuals;
+output[5:0] predictors;
+
+reg[5:0] residuals;
+reg[5:0] predictors;
+
+reg residuals_rdy;
+reg predictors_rdy;
+
+//no-pred残差、预测基值的计算
+always @(posedge clk or negedge rst) begin
+  
+  if(~rst) begin
+    
+    residuals <= 0;
+    residuals_rdy <= 0;
+    predictors_rdy <= 0;
+    
+  end
+  else if(enable_gclis) begin
+    
+	//根据公式，no_pred下预测基值全为0，残差为 max（M-T，0）
+    residuals <= (gclis - gtlis) > 0 ? (gclis - gtlis) : 0;
+    predictors <= 0;
+    
+    predictors_rdy <= 1;
+    residuals_rdy <= 1;
+
+  end
+  else begin
+
+    residuals <= residuals;
+    predictors <= predictors;
+    
+  end
+
+end
+
+endmodule
