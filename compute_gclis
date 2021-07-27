@@ -11,6 +11,7 @@ module compute_gclis(   clk,
                         gclis_out,
                         rdy
                     );
+
     //时钟信号、复位信号、上层使能信号
     input clk;
     input rst;
@@ -30,46 +31,89 @@ module compute_gclis(   clk,
     reg abs_ready ;
     //定义临时变量
 
-    //四个输入系数的绝对值，11位宽
-    /*reg[10:0] abs_wv1 ;
-    reg[10:0] abs_wv2 ;
-    reg[10:0] abs_wv3 ;
-    reg[10:0] abs_wv4 ;*/
+    //四个输入系数的原码表示，11位宽
+    reg[11:0] true_wv1 ;
+    reg[11:0] true_wv2 ;
+    reg[11:0] true_wv3 ;
+    reg[11:0] true_wv4 ;
+    reg true_ready;
 
     reg[10:0] max_wv;   //四个输入系数绝对值的最大值
 
-    //把四个数中最大值赋值给max_wv
-    always @(posedge clk ) begin
-
-        if(enable_compute_gclis) begin
-
-            /*abs_wv1 <= wv_in1[10:0];
-            abs_wv2 <= wv_in2[10:0];
-            abs_wv3 <= wv_in3[10:0];
-            abs_wv4 <= wv_in4[10:0];*/
-
-			max_wv <= (wv_in1[10:0] > wv_in2[10:0] ? wv_in1[10:0] : wv_in2[10:0]) > (wv_in3[10:0] > wv_in4[10:0] ? wv_in3[10:0] : wv_in4[10:0]) ? (wv_in1[10:0] > wv_in2[10:0] ? wv_in1[10:0] : wv_in2[10:0]) : (wv_in3[10:0] > wv_in4[10:0] ? wv_in3[10:0] : wv_in4[10:0]);
-            abs_ready <= 1;
+    //输入系数补码变原码
+    always @(posedge clk) begin
+      if(enable_compute_gclis) begin
+        
+        if(wv_in1[11] == 0) begin
+            true_wv1 <= wv_in1;
         end
         else begin
-            abs_ready <= 0;
+            true_wv1 <= {wv_in1[11], ~wv_in1[10:0] + 1'b1};
+        end
+        
+        if(wv_in2[11] == 0) begin
+            true_wv2 <= wv_in2;
+        end
+        else begin
+            true_wv2 <= {wv_in2[11], ~wv_in2[10:0] + 1'b1};
+        end
+
+        if(wv_in3[11] == 0) begin
+            true_wv3 <= wv_in3;
+        end
+        else begin
+            true_wv3 <= {wv_in3[11], ~wv_in3[10:0] + 1'b1};
+        end
+
+        if(wv_in4[11] == 0) begin
+            true_wv4 <= wv_in4;
+        end
+        else begin
+            true_wv4 <= {wv_in4[11], ~wv_in4[10:0] + 1'b1};
+        end
+
+        true_ready <= 1'd1;
+
+      end
+      else begin
+        
+        true_wv1 <= true_wv1;
+        true_wv2 <= true_wv2;
+        true_wv3 <= true_wv3;
+        true_wv4 <= true_wv4;
+
+      end
+
+    end
+
+    //把四个数中最大值赋值给max_wv
+    always @(posedge clk) begin
+
+        if(true_ready) begin
+
+			max_wv <= (true_wv1[10:0] > true_wv2[10:0] ? true_wv2[10:0] : true_wv2[10:0]) > (true_wv3[10:0] > true_wv4[10:0] ? true_wv3[10:0] : true_wv4[10:0]) ? (true_wv1[10:0] > true_wv2[10:0] ? true_wv1[10:0] : true_wv2[10:0]) : (true_wv3[10:0] > true_wv4[10:0] ? true_wv3[10:0] : true_wv4[10:0]);
+            abs_ready <= 1'd1;
+
+        end
+        else begin
+            max_wv <= max_wv;
         end
 
     end
 
+    //输出位平面数
     always @(posedge clk or negedge rst) begin
         if(~rst) begin
-            
-            /*abs_wv1 <= 11'd0;
-            abs_wv2 <= 11'd0;
-            abs_wv3 <= 11'd0;
-            abs_wv4 <= 11'd0;*/
 
             max_wv <= 11'd0;
-
             abs_ready <= 1'b0;
             rdy <= 1'b0;
             gclis_out <= 4'd0;
+            true_ready <= 1'b0;
+            true_wv1 <= 11'd0;
+            true_wv2 <= 11'd0;
+            true_wv3 <= 11'd0;
+            true_wv4 <= 11'd0;
 
         end
         else if(abs_ready) begin
@@ -88,11 +132,12 @@ module compute_gclis(   clk,
             else                        gclis_out <= 4'd0;
 
             rdy <= 1;
-            //abs_ready <= 0;
-
+            
         end
         else begin
-            rdy <= 0;
+            
+            gclis_out <= gclis_out;
+
         end
 
     end
