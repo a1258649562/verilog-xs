@@ -1,0 +1,109 @@
+`timescale 1ns/10ps
+
+module fill_fifo_tb();
+
+reg clk;
+reg rst;
+
+reg[12:0] image_width;
+
+reg[11:0] Y_LL_5_1;
+reg[11:0] U_LL_5_1;
+reg[11:0] V_LL_5_1;
+
+reg enable_Y_LL_5_1;
+reg enable_U_LL_5_1;
+reg enable_V_LL_5_1;
+
+wire[11:0] wv_out;
+
+parameter DELY = 100;
+integer i;
+
+always #(DELY/2) clk = ~clk;
+
+fill_fifo instance1(          .clk(clk), 
+                              .rst(rst), 
+        
+                              .image_width(image_width),
+        
+                              .Y_LL_5_1(Y_LL_5_1),
+                              .enable_Y_LL_5_1(enable_Y_LL_5_1),
+                              .U_LL_5_1(U_LL_5_1),
+                              .enable_U_LL_5_1(enable_U_LL_5_1),
+							  .V_LL_5_1(V_LL_5_1),
+                              .enable_V_LL_5_1(enable_V_LL_5_1),
+                              
+                              .wv_out(wv_out)
+                            );
+
+initial begin
+  
+  clk = 0; rst = 1; enable_Y_LL_5_1 = 0; enable_U_LL_5_1 = 0; enable_V_LL_5_1 = 0;
+  #DELY 
+  rst = 0;
+  #DELY 
+  rst = 1;
+  # (DELY / 2)
+  for(i = 0; i < 30 ; i = i + 1) begin
+    
+    if(i < 4) begin
+      
+      #DELY
+      enable_Y_LL_5_1 = 1;
+      Y_LL_5_1 = i;
+	  
+	  enable_U_LL_5_1 = 1; 
+      U_LL_5_1 = i;
+	  
+	  enable_V_LL_5_1 = 1;
+	  V_LL_5_1 = i;
+
+    end
+	else if(i < 8) begin
+      
+      #DELY
+      enable_U_LL_5_1 = 1; 
+      U_LL_5_1 = i;
+      
+      enable_V_LL_5_1 = 1;
+	  V_LL_5_1 = i;
+	  
+	  if(i == 4) begin
+	
+		  enable_Y_LL_5_1 = 0;
+		  
+	  end
+      
+
+    end
+	else if(i < 16) begin
+	
+	
+      
+      #DELY
+      enable_V_LL_5_1 = 1;
+	  V_LL_5_1 = i;
+	  
+	  if(i == 8) begin
+	
+		  enable_U_LL_5_1 = 0;
+		  
+	  end
+	  
+
+    end
+	
+    
+	if(i == 16) begin
+	
+      #DELY
+	  enable_V_LL_5_1 = 0;
+	  
+    end
+    
+  end
+
+end
+
+endmodule
