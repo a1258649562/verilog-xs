@@ -1,0 +1,90 @@
+`timescale 1ns/10ps
+
+module fill_fifo( 	  clk, 
+                      rst, 
+
+                      image_width,
+
+                      Y_LL_5_1,
+                      enable_Y_LL_5_1,
+                      U_LL_5_1,
+                      enable_U_LL_5_1,
+					  V_LL_5_1,
+                      enable_V_LL_5_1,
+                      
+                      wv_out
+                    );
+
+input clk;
+input rst;
+
+input[12:0] image_width;
+
+input[11:0] Y_LL_5_1;
+input[11:0] U_LL_5_1;
+input[11:0] V_LL_5_1;
+
+input enable_Y_LL_5_1;
+input enable_U_LL_5_1;
+input enable_V_LL_5_1;
+
+output[11:0] wv_out;
+reg[11:0] wv_out;
+
+//各个fifo之间的连接
+reg tmp;
+wire band_1to2;
+wire band_2to3;
+wire band_3to4;
+
+//多路选择器
+wire[11:0] Mux_data[1:24];
+wire sel[1:24];
+
+band_fifo band_fifo_one(  .clk(clk),
+                          .rst(rst),
+                          .we(enable_Y_LL_5_1),
+                          .send_enable(1),
+                          .data_in(Y_LL_5_1),
+                          .data_out(Mux_data[1]),
+                          .data_ready(sel[1]),
+                          .next_enable(band_1to2)
+                        );
+
+defparam band_fifo_one.depth = 3;
+
+band_fifo band_fifo_two(  .clk(clk),
+                          .rst(rst),
+                          .we(enable_U_LL_5_1),
+                          .send_enable(band_1to2),
+                          .data_in(U_LL_5_1),
+                          .data_out(Mux_data[2]),
+                          .data_ready(sel[2]),
+                          .next_enable(band_2to3)
+                        );
+
+defparam band_fifo_two.depth = 7;
+
+band_fifo band_fifo_three(  .clk(clk),
+                          .rst(rst),
+                          .we(enable_V_LL_5_1),
+                          .send_enable(band_2to3),
+                          .data_in(V_LL_5_1),
+                          .data_out(Mux_data[3]),
+                          .data_ready(sel[3]),
+                          .next_enable(band_3to4)
+                        );
+
+defparam band_fifo_three.depth = 15;
+
+//多路复用器决定哪个端口输出
+always @(posedge clk) begin
+
+    if(sel[1])                wv_out <= Mux_data[1];
+    else if(sel[2])           wv_out <= Mux_data[2];
+	else if(sel[3]) 		  wv_out <= Mux_data[3];
+    else                      tmp <= tmp;
+    
+end
+
+endmodule
